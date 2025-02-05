@@ -1,5 +1,9 @@
-import { Plugin } from '@elizaos/core';
-
-declare const alloraPlugin: Plugin;
+declare const alloraPlugin: {
+    name: string;
+    description: string;
+    actions: any[];
+    evaluators: any[];
+    providers: any[];
+};
 
 export { alloraPlugin };
