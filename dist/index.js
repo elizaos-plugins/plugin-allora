@@ -3933,8 +3933,7 @@ var TopicsProvider = class {
   }
   async get(runtime, _message, _state) {
     const alloraTopics = await this.getAlloraTopics(runtime);
-    let output = `Allora Network Topics: 
-`;
+    let output = "Allora Network Topics: \n";
     for (const topic of alloraTopics) {
       output += `Topic Name: ${topic.topic_name}
 `;
@@ -3946,8 +3945,7 @@ var TopicsProvider = class {
 `;
       output += `Topic Updated At: ${topic.updated_at}
 `;
-      output += `
-`;
+      output += "\n";
     }
     return output;
   }
@@ -3991,7 +3989,7 @@ Given the recent messages and the Allora Network Topics above, extract the follo
 - Topic ID of the topic that best matches the user's request. The topic should be active, otherwise return null.
 - Topic Name of the topic that best matches the user's request. The topic should be active, otherwise return null.
 
-If the topic is not active or the prediction timeframe is not matching the user's request, return null for both topicId and topicName.
+If the topic is not active or the inference timeframe is not matching the user's request, return null for both topicId and topicName.
 
 Respond with a JSON markdown block containing only the extracted values. Use null for any values that cannot be determined. The result should be a valid JSON object with the following schema:
 \`\`\`json
@@ -4015,15 +4013,16 @@ var getInferenceAction = {
     return true;
   },
   description: "Get inference from Allora Network",
-  handler: async (runtime, message, state, options, callback) => {
-    if (!state) {
-      state = await runtime.composeState(message);
+  handler: async (runtime, message, state, _options, callback) => {
+    let currentState = state;
+    if (!currentState) {
+      currentState = await runtime.composeState(message);
     } else {
-      state = await runtime.updateRecentMessageState(state);
+      currentState = await runtime.updateRecentMessageState(currentState);
     }
-    state.alloraTopics = await topicsProvider.get(runtime, message, state);
+    currentState.alloraTopics = await topicsProvider.get(runtime, message, currentState);
     const inferenceTopicContext = composeContext({
-      state,
+      state: currentState,
       template: getInferenceTemplate
     });
     const schema = z.object({
@@ -4087,7 +4086,7 @@ var getInferenceAction = {
       {
         user: "{{user2}}",
         content: {
-          text: "Inference provided by Allora Network on topic ETH 5min Prediction (ID: 13): 3393.364326646801085508"
+          text: "Inference provided by Allora Network on topic ETH 5min (ID: 13): 3393.364326646801085508"
         }
       }
     ],
