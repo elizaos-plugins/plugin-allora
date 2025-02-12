@@ -14,6 +14,7 @@ import {
 import NodeCache from "node-cache";
 import { AlloraAPIClient } from "@alloralabs/allora-sdk";
 var TopicsProvider = class {
+  cache;
   constructor() {
     this.cache = new NodeCache({ stdTTL: 30 * 60 });
   }
