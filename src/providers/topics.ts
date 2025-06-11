@@ -1,68 +1,62 @@
-import {
-    elizaLogger,
-    type IAgentRuntime,
-    type Memory,
-    type Provider,
-    type State,
-} from "@elizaos/core";
+import type { IAgentRuntime, Memory, Provider, State } from "@elizaos/core";
+import { logger } from "@elizaos/core";
 import NodeCache from "node-cache";
-import { AlloraAPIClient, type AlloraTopic, type ChainSlug } from "@alloralabs/allora-sdk";
+import {
+  AlloraAPIClient,
+  type AlloraTopic,
+  type ChainSlug,
+} from "@alloralabs/allora-sdk";
+import { validateAlloraConfig } from "../config.js";
 
-export class TopicsProvider implements Provider {
-    private cache: NodeCache;
+const cache = new NodeCache({ stdTTL: 30 * 60 });
 
-    constructor() {
-        this.cache = new NodeCache({ stdTTL: 30 * 60 }); // Cache TTL set to 30 minutes
-    }
+async function getAlloraTopics(runtime: IAgentRuntime): Promise<AlloraTopic[]> {
+  const cacheKey = "allora-topics";
+  const cachedValue = cache.get<AlloraTopic[]>(cacheKey);
 
-    async get(
-        runtime: IAgentRuntime,
-        _message: Memory,
-        _state?: State
-    ): Promise<string | null> {
-        const alloraTopics = await this.getAlloraTopics(runtime);
+  if (cachedValue) {
+    logger.info("Retrieving Allora topics from cache");
+    return cachedValue;
+  }
 
-        // Format the topics into a string to be added to the prompt context
-        let output = 'Allora Network Topics: \n';
-        for (const topic of alloraTopics) {
-            output += `Topic Name: ${topic.topic_name}\n`;
-            output += `Topic Description: ${topic.description}\n`;
-            output += `Topic ID: ${topic.topic_id}\n`;
-            output += `Topic is Active: ${topic.is_active}\n`;
-            output += `Topic Updated At: ${topic.updated_at}\n`;
-            output += '\n';
-        }
+  const config = validateAlloraConfig(runtime);
 
-        return output;
-    }
+  const alloraApiClient = new AlloraAPIClient({
+    chainSlug: config.ALLORA_CHAIN_SLUG as ChainSlug,
+    apiKey: config.ALLORA_API_KEY,
+  });
+  const alloraTopics = await alloraApiClient.getAllTopics();
 
-    private async getAlloraTopics(
-        runtime: IAgentRuntime
-    ): Promise<AlloraTopic[]> {
-        const cacheKey = "allora-topics";
-        const cachedValue = this.cache.get<AlloraTopic[]>(cacheKey);
+  cache.set(cacheKey, alloraTopics);
 
-        // If the topics are aready cached, return them
-        if (cachedValue) {
-            elizaLogger.info("Retrieving Allora topics from cache");
-            return cachedValue;
-        }
-
-        // If the topics are not cached, retrieve them from the Allora API
-        const alloraApiKey = runtime.getSetting("ALLORA_API_KEY");
-        const alloraChainSlug = runtime.getSetting("ALLORA_CHAIN_SLUG");
-
-        const alloraApiClient = new AlloraAPIClient({
-            chainSlug: alloraChainSlug as ChainSlug,
-            apiKey: alloraApiKey as string,
-        });
-        const alloraTopics = await alloraApiClient.getAllTopics();
-
-        // Cache the retrieved topics
-        this.cache.set(cacheKey, alloraTopics);
-
-        return alloraTopics;
-    }
+  return alloraTopics;
 }
 
-export const topicsProvider = new TopicsProvider();
+export const topicsProvider: Provider = {
+  name: "alloraTopics",
+  get: async (runtime: IAgentRuntime, message: Memory, state: State) => {
+    const alloraTopics = await getAlloraTopics(runtime);
+
+    let output = "Allora Network Topics: \n";
+    for (const topic of alloraTopics) {
+      output += `Topic Name: ${topic.topic_name}\n`;
+      output += `Topic Description: ${topic.description}\n`;
+      output += `Topic ID: ${topic.topic_id}\n`;
+      output += `Topic is Active: ${topic.is_active}\n`;
+      output += `Topic Updated At: ${topic.updated_at}\n`;
+      output += "\n";
+    }
+
+    return {
+      data: {
+        topics: alloraTopics,
+        count: alloraTopics.length,
+      },
+      values: {
+        activeTopics: alloraTopics.filter((topic) => topic.is_active).length,
+        totalTopics: alloraTopics.length,
+      },
+      text: output,
+    };
+  },
+};

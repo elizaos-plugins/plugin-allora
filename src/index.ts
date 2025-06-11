@@ -1,10 +1,17 @@
-import { getInferenceAction } from "./actions/getInference";
-import { topicsProvider } from "./providers/topics";
+import { type Plugin } from "@elizaos/core";
+import { getInferenceAction } from "./actions/getInference.js";
+import { topicsProvider } from "./providers/topics.js";
+import testSuite from "./test/test.js";
 
-export const alloraPlugin = {
-    name: "Allora Network plugin",
-    description: "Allora Network plugin for Eliza",
-    actions: [getInferenceAction as any],
-    evaluators: [],
-    providers: [topicsProvider as any],
+const alloraPlugin: Plugin = {
+  name: "@elizaos-plugins/allora",
+  description: "Allora Network plugin for ElizaOS",
+  services: [],
+  actions: [getInferenceAction],
+  providers: [topicsProvider],
+  evaluators: [],
+  tests: [testSuite],
 };
+
+export default alloraPlugin;
+export * from "./config.js";

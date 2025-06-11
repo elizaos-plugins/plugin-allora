@@ -1,6 +1,16 @@
-*
+# Source files
+src/
+__tests__/
+e2e/
 
-!dist/**
-!package.json
-!readme.md
-!tsup.config.ts
+# Config files
+tsconfig*.json
+tsup.config.ts
+.github/
+.gitignore
+
+# Development files
+*.test.*
+*.spec.*
+coverage/
+.turbo/
